@@ -11,19 +11,13 @@
 	html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #080a0a; overflow: hidden; }
 	#picture {
 		position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-		object-fit: cover;   /* (an ordinary picture, filling the screen; nothing has to run for it to show) */
-		animation: appear 0s ease both, drift 90s ease-in-out infinite;
+		/* (nothing else on it: no fade, no movement. An ordinary picture filling the screen.) */
 	}
-	@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
 	#shade { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.43); }
-	@keyframes drift {
-		0%, 100% { transform: scale(1.00) translate(0, 0); }
-		50%      { transform: scale(1.06) translate(-1%, -1%); }
-	}
 </style>
 </head>
 <body>
-<img id="picture" src="background.jpg" alt="">
+<img id="picture" src="background.jpg" alt="" width="100%" height="100%">
 <div id="shade"></div>
 <script>
 	// ---- SOUND (edit these) ------------------------------------------------------------------------------------------
