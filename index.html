@@ -28,9 +28,63 @@
 	var BED_FADE_IN = 4;               // seconds to come up
 	var BED_FADE_OUT = 2.5;            // seconds to go away when the game says it is starting (Gmod tells the page; see SetStatusChanged below)
 	var FADE_OUT_ON = ["lua", "starting"];   // fade out when the game's status line contains one of these words
+
+	// Sounds that come in now and then over the bed, one at a time, in no fixed order (never the same one twice running).
+	// volume: 0 to 1 (lower = quieter). pan: "random" = a different side each time, 0 = as recorded, -1 = left, 1 = right.
+	var EFFECTS_ON = true;
+	var EFFECTS_FIRST = [8, 14];       // seconds before the first one (a random time between these two)
+	var EFFECTS_GAP = [15, 35];        // seconds between one and the next (random between these two)
+	var EFFECTS = [
+		{ file: "sounds/heli.ogg",  volume: 0.5, pan: 0 },          // helicopter passing
+		{ file: "sounds/phone.ogg", volume: 0.3, pan: "random" },   // a phone ringing once, far away
+		{ file: "sounds/radio.ogg", volume: 0.5, pan: "random" }    // a radio between stations
+	];
 	// -------------------------------------------------------------------------------------------------------------------
 
-	var audio, gain;
+	var audio, gain, sfxGain, effectBuffers = [], lastEffect = -1, effectTimer, effectsStopped = false;
+	function between(range) { return range[0] + Math.random() * (range[1] - range[0]); }
+	function nextEffect(seconds) { effectTimer = setTimeout(playEffect, seconds * 1000); }
+	function playEffect() {
+		if (effectsStopped) return;
+		try {
+			var ready = [];
+			for (var i = 0; i < EFFECTS.length; i++) if (effectBuffers[i] && i !== lastEffect) ready.push(i);
+			if (ready.length) {
+				var pick = ready[Math.floor(Math.random() * ready.length)], effect = EFFECTS[pick];
+				var source = audio.createBufferSource();
+				source.buffer = effectBuffers[pick];
+				var volume = audio.createGain();
+				volume.gain.value = effect.volume;
+				source.connect(volume);
+				if (audio.createStereoPanner) {
+					var panner = audio.createStereoPanner();
+					panner.pan.value = effect.pan === "random" ? (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.5) : (effect.pan || 0);
+					volume.connect(panner);
+					panner.connect(sfxGain);
+				} else {
+					volume.connect(sfxGain);
+				}
+				source.start(0);
+				lastEffect = pick;
+			}
+		} catch (e) { /* skip this one */ }
+		nextEffect(between(EFFECTS_GAP));
+	}
+	function startEffects() {
+		if (!EFFECTS_ON || !EFFECTS.length) return;
+		sfxGain = audio.createGain();
+		sfxGain.gain.value = 1;
+		sfxGain.connect(audio.destination);
+		EFFECTS.forEach(function (effect, i) {
+			var request = new XMLHttpRequest();
+			request.open("GET", effect.file, true);
+			request.responseType = "arraybuffer";
+			request.onload = function () { audio.decodeAudioData(request.response, function (buffer) { effectBuffers[i] = buffer; }); };
+			request.send();
+		});
+		nextEffect(between(EFFECTS_FIRST));
+	}
+
 	function startBed() {
 		try {
 			var Context = window.AudioContext || window.webkitAudioContext;
@@ -39,6 +93,7 @@
 			gain = audio.createGain();
 			gain.gain.value = 0;
 			gain.connect(audio.destination);
+			startEffects();
 			var request = new XMLHttpRequest();
 			request.open("GET", BED_FILE, true);
 			request.responseType = "arraybuffer";
@@ -62,6 +117,13 @@
 	}
 	function fadeBedOut() {
 		if (!audio || !gain) return;
+		effectsStopped = true;
+		clearTimeout(effectTimer);
+		if (sfxGain) {
+			sfxGain.gain.cancelScheduledValues(audio.currentTime);
+			sfxGain.gain.setValueAtTime(sfxGain.gain.value, audio.currentTime);
+			sfxGain.gain.linearRampToValueAtTime(0, audio.currentTime + BED_FADE_OUT);
+		}
 		gain.gain.cancelScheduledValues(audio.currentTime);
 		gain.gain.setValueAtTime(gain.gain.value, audio.currentTime);
 		gain.gain.linearRampToValueAtTime(0, audio.currentTime + BED_FADE_OUT);
