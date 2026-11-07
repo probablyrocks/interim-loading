@@ -16,11 +16,10 @@
 	#picture {
 		position: fixed; inset: 0;
 		background: url("background.jpg") center / cover no-repeat;
-		opacity: 0;
-		transition: opacity var(--fade-in) ease;
-		animation: drift var(--drift) ease-in-out infinite;
+		/* (shows straight away; the fade is only a CSS animation, so nothing has to run for the picture to appear) */
+		animation: appear var(--fade-in) ease both, drift var(--drift) ease-in-out infinite;
 	}
-	#picture.ready { opacity: 1; }
+	@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
 	#shade { position: fixed; inset: 0; background: rgba(0, 0, 0, var(--darken)); }
 	@keyframes drift {
 		0%, 100% { transform: scale(1.00) translate(0, 0); }
@@ -83,12 +82,6 @@
 	}
 	startBed();
 
-	// Come up out of black once the picture has arrived.
-	var picture = document.getElementById("picture");
-	var image = new Image();
-	image.onload = function () { picture.classList.add("ready"); };
-	image.src = "background.jpg";
-	// (If the picture cannot load, the screen simply stays the same dark colour as the menu.)
 </script>
 </body>
 </html>
