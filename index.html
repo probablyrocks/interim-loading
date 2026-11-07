@@ -32,6 +32,57 @@
 <div id="picture"></div>
 <div id="shade"></div>
 <script>
+	// ---- SOUND (edit these) ------------------------------------------------------------------------------------------
+	var BED_FILE = "sounds/bed.ogg";   // the bed: it repeats for as long as the page is open (the file already loops smoothly)
+	var BED_VOLUME = 0.5;              // 0 = silent, 1 = as recorded. The file is already quiet; lower this if it is still too loud.
+	var BED_FADE_IN = 4;               // seconds to come up
+	var BED_FADE_OUT = 2.5;            // seconds to go away when the game says it is starting (Gmod tells the page; see SetStatusChanged below)
+	var FADE_OUT_ON = ["lua", "starting"];   // fade out when the game's status line contains one of these words
+	// -------------------------------------------------------------------------------------------------------------------
+
+	var audio, gain;
+	function startBed() {
+		try {
+			var Context = window.AudioContext || window.webkitAudioContext;
+			if (!Context || BED_VOLUME <= 0) return;
+			audio = new Context();
+			gain = audio.createGain();
+			gain.gain.value = 0;
+			gain.connect(audio.destination);
+			var request = new XMLHttpRequest();
+			request.open("GET", BED_FILE, true);
+			request.responseType = "arraybuffer";
+			request.onload = function () {
+				audio.decodeAudioData(request.response, function (buffer) {
+					var source = audio.createBufferSource();
+					source.buffer = buffer;
+					source.loop = true;   // (a buffer loops without a gap)
+					source.connect(gain);
+					source.start(0);
+					gain.gain.setValueAtTime(0, audio.currentTime);
+					gain.gain.linearRampToValueAtTime(BED_VOLUME, audio.currentTime + BED_FADE_IN);
+				});
+			};
+			request.send();
+			// (a normal browser waits for a click before it lets a page make sound; the game does not)
+			var wake = function () { if (audio && audio.state === "suspended") audio.resume(); };
+			document.addEventListener("click", wake);
+			document.addEventListener("keydown", wake);
+		} catch (e) { /* no sound is fine */ }
+	}
+	function fadeBedOut() {
+		if (!audio || !gain) return;
+		gain.gain.cancelScheduledValues(audio.currentTime);
+		gain.gain.setValueAtTime(gain.gain.value, audio.currentTime);
+		gain.gain.linearRampToValueAtTime(0, audio.currentTime + BED_FADE_OUT);
+	}
+	// The game calls this with its own status line ("Sending client info...", "Starting Lua..."): fade out as it gets going.
+	function SetStatusChanged(status) {
+		var text = String(status || "").toLowerCase();
+		for (var i = 0; i < FADE_OUT_ON.length; i++) if (text.indexOf(FADE_OUT_ON[i]) !== -1) { fadeBedOut(); return; }
+	}
+	startBed();
+
 	// Come up out of black once the picture has arrived.
 	var picture = document.getElementById("picture");
 	var image = new Image();
