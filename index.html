@@ -6,21 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 	/* INTERIM loading screen: just the menu background, slowly drifting, fading in out of black.
-	   Things you may want to change are the three numbers marked EDIT. */
-	:root {
-		--darken: 0.43;        /* EDIT: how dark the picture is (0 = not at all, 1 = black). 0.43 matches the in-game menu (settings.lua menu.darken 110 out of 255) */
-		--fade-in: 0s;         /* EDIT: how slowly it comes up out of black (0s = no fade: the picture just appears once it has loaded) */
-		--drift: 90s;          /* EDIT: how long one slow zoom in and out takes */
-	}
-	html, body { margin: 0; height: 100%; background: #080a0a; overflow: hidden; }
+	   Things you may want to change: the picture's darkness (rgba(0, 0, 0, 0.43) in #shade), the fade in (animation: appear 0s) and the drift speed
+	   (drift 90s) below. Plain CSS only, so older browsers in the game understand it. */
+	html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #080a0a; overflow: hidden; }
 	#picture {
-		position: fixed; inset: 0;
-		background: url("background.jpg") center / cover no-repeat;
+		position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+		background-image: url("background.jpg");
+		background-position: center center;
+		background-size: cover;
+		background-repeat: no-repeat;
 		/* (shows straight away; the fade is only a CSS animation, so nothing has to run for the picture to appear) */
-		animation: appear var(--fade-in) ease both, drift var(--drift) ease-in-out infinite;
+		animation: appear 0s ease both, drift 90s ease-in-out infinite;
 	}
 	@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
-	#shade { position: fixed; inset: 0; background: rgba(0, 0, 0, var(--darken)); }
+	#shade { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.43); }
 	@keyframes drift {
 		0%, 100% { transform: scale(1.00) translate(0, 0); }
 		50%      { transform: scale(1.06) translate(-1%, -1%); }
