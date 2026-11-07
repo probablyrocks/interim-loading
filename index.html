@@ -34,6 +34,8 @@
 	var EFFECTS_ON = true;
 	var EFFECTS_FIRST = [8, 14];       // seconds before the first one (a random time between these two)
 	var EFFECTS_GAP = [15, 35];        // seconds between one and the next (random between these two)
+	var EFFECTS_PAN = [0.1, 0.3];      // how far to one side a "random" sound sits (0 = centre, 1 = fully in one ear). Kept small on purpose: a ring or hiss hard in one ear is hard on sensitive ears.
+	var EFFECTS_SOFTEN = 6000;         // cuts the sharpest highs (rings, hiss) above this many Hz. 0 = leave as recorded.
 	var EFFECTS = [
 		{ file: "sounds/heli.ogg",  volume: 0.5, pan: 0 },          // helicopter passing
 		{ file: "sounds/phone.ogg", volume: 0.3, pan: "random" },   // a phone ringing once, far away
@@ -55,10 +57,18 @@
 				source.buffer = effectBuffers[pick];
 				var volume = audio.createGain();
 				volume.gain.value = effect.volume;
-				source.connect(volume);
+				if (EFFECTS_SOFTEN > 0 && audio.createBiquadFilter) {
+					var soften = audio.createBiquadFilter();
+					soften.type = "lowpass";
+					soften.frequency.value = EFFECTS_SOFTEN;
+					source.connect(soften);
+					soften.connect(volume);
+				} else {
+					source.connect(volume);
+				}
 				if (audio.createStereoPanner) {
 					var panner = audio.createStereoPanner();
-					panner.pan.value = effect.pan === "random" ? (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.5) : (effect.pan || 0);
+					panner.pan.value = effect.pan === "random" ? (Math.random() < 0.5 ? -1 : 1) * between(EFFECTS_PAN) : (effect.pan || 0);
 					volume.connect(panner);
 					panner.connect(sfxGain);
 				} else {
